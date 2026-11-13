@@ -1,7 +1,7 @@
 const C = window.CAMPUSSYNC || {};
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const G = {All:'✨', Tech:'💻', Arts:'🎨', Talks:'🎤', Science:'🔬', Business:'💼', Wellness:'🧘'};
+const G = {All:'✨', Tech:'💻', Arts:'🎨', Talks:'🎤', Science:'🔬', Business:'💼', Wellness:'🧘', Saved:'❤️'};
 // name, group, label, emoji, tagline  (edit the labels and taglines here any time)
 const CL = [
 ['VClick','Arts','Photography','📸','Frame every moment'],['The Investment Forum','Business','Finance','📈','Make money work for you'],
@@ -34,10 +34,10 @@ async function load() {
   try { [D.clubs, D.sessions, D.promos] = await Promise.all([rest('clubs?select=*&order=name'), rest('sessions?select=*&order=starts'), rest('promos?select=*&order=created_at.desc')]); }
   catch (e) { msg('Could not load data. Check your connection.'); }
 }
-const mk = (c, i, db) => { const h = (i * 137.5) % 360; return {name: db ? db.name : c[0], group: c[1], label: c[2], emoji: c[3], tag: c[4], a: `hsl(${h} 78% 46%)`, b: `hsl(${(h + 40) % 360} 80% 26%)`, db}; };
+const mk = (c, i, db) => { const h = (i * 137.5) % 360; const cat = db && db.category; return {name: db ? db.name : c[0], group: cat || c[1], label: cat && !c[0] ? cat : c[2], emoji: (db && db.emoji) || c[3], tag: c[4], a: `hsl(${h} 78% 46%)`, b: `hsl(${(h + 40) % 360} 80% 26%)`, db}; };
 function merge() {
   const seen = new Set();
-  ML = CL.map((c, i) => { const db = D.clubs.find(x => (x.name || '').toLowerCase() === c[0].toLowerCase()); if (db) seen.add(db.id); return mk(c, i, db); });
+  ML = CL.map((c, i) => { const db = D.clubs.find(x => (x.name || '').toLowerCase() === c[0].toLowerCase()); if (db) seen.add(db.id); return db ? mk(c, i, db) : null; }).filter(Boolean);
   D.clubs.filter(x => !seen.has(x.id)).forEach((x, j) => ML.push(mk(['', 'More', 'Club', '✨', ''], CL.length + j, x)));
   M = {}; ML.forEach(c => c.db && (M[c.db.id] = c));
 }
@@ -45,8 +45,16 @@ const up = () => D.sessions.filter(s => s.starts && new Date(s.starts) >= Date.n
 const dt = t => { const d = new Date(t); return {day: d.getDate(), mon: d.toLocaleString([], {month: 'short'}), full: d.toLocaleString([], {weekday: 'short', hour: 'numeric', minute: '2-digit'})}; };
 const free = s => s.mode === 'Free' || !+s.fee;
 const pay = s => free(s) ? 'Free entry' : `₹${+s.fee} by ${esc(s.mode)}`;
-const ses = (s, c) => { const d = dt(s.starts); return `<div class="ses" style="--a:${c.a};--b:${c.b}"><div class="dt"><b>${d.day}</b>${d.mon}</div><div class="si"><b>${esc(s.title)}</b><div class="mut">${esc(c.name)}</div><div class="mut">${d.full}${s.venue ? ' at ' + esc(s.venue) : ''}</div><span class="pill">${pay(s)}</span>${!free(s) && s.info ? `<div class="mut">${esc(s.info)}</div>` : ''}
-  <details><summary class="btn sm">Join</summary><form data-act="join" data-sid="${s.id}"><input name="name" placeholder="Your name" value="${esc(localStorage.cs_name || '')}" required><input name="email" type="email" placeholder="Email" value="${esc(localStorage.cs_email || '')}" required><button class="btn">Confirm</button></form></details></div></div>`; };
+const favs = () => { try { return JSON.parse(localStorage.cs_fav || '[]'); } catch (e) { return []; } };
+const isFav = c => favs().includes(c.name);
+let CUR;
+function toggleFav(c) { if (!c) return; const f = favs(), i = f.indexOf(c.name); i < 0 ? f.push(c.name) : f.splice(i, 1); localStorage.cs_fav = JSON.stringify(f); draw(); document.querySelectorAll('.x.l').forEach(el => el.textContent = isFav(c) ? '♥' : '♡'); }
+const rel = t => { const d = Math.ceil((new Date(t).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 864e5); return d <= 0 ? 'Today' : d === 1 ? 'Tomorrow' : `in ${d} days`; };
+const gcal = (s, c) => { const a = new Date(s.starts), b = new Date(+a + 36e5), f = d => d.toISOString().replace(/[-:]|\.\d{3}/g, ''); return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(c.name + ': ' + s.title) + '&dates=' + f(a) + '/' + f(b) + '&location=' + encodeURIComponent(s.venue || '') + '&details=' + encodeURIComponent(s.info || ''); };
+function share() { if (!CUR) return; const d = {title: CUR.name, text: 'Check out ' + CUR.name + ' on CampusSync', url: location.href}; if (navigator.share) navigator.share(d).catch(() => {}); else if (navigator.clipboard) { navigator.clipboard.writeText(d.url); msg('Link copied.'); } }
+function burst() { const e = ['🎉', '✨', '🎊', '⭐', '💜']; for (let i = 0; i < 26; i++) { const s = document.createElement('span'); s.className = 'cf'; s.textContent = e[i % 5]; s.style.cssText = `left:${Math.random() * 100}vw;animation-delay:${Math.random() * .4}s;font-size:${16 + Math.random() * 16}px`; document.body.append(s); setTimeout(() => s.remove(), 2400); } }
+const ses = (s, c) => { const d = dt(s.starts); return `<div class="ses" style="--a:${c.a};--b:${c.b}"><div class="dt"><b>${d.day}</b>${d.mon}</div><div class="si"><b>${esc(s.title)}</b><div class="mut">${esc(c.name)}</div><div class="mut">${d.full}${s.venue ? ' at ' + esc(s.venue) : ''}</div><span class="pill">${pay(s)}</span> <span class="pill hot">${rel(s.starts)}</span>${!free(s) && s.info ? `<div class="mut">${esc(s.info)}</div>` : ''}
+  <details><summary class="btn sm">Join</summary><form data-act="join" data-sid="${s.id}"><input name="name" placeholder="Your name" value="${esc(localStorage.cs_name || '')}" required><input name="email" type="email" placeholder="Email" value="${esc(localStorage.cs_email || '')}" required><button class="btn">Confirm</button></form></details> <a class="btn sm alt" href="${gcal(s, c)}" target="_blank" rel="noopener">Add to calendar</a></div></div>`; };
 function vid(u) {
   u = (u || '').trim(); if (!/^https:\/\//.test(u)) return '';
   const y = u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
@@ -56,24 +64,24 @@ function vid(u) {
 }
 function draw() {
   merge(); const q = S.q.toLowerCase();
-  $('#count').textContent = `${ML.length} clubs. Pick the one that feels like you.`;
   $('#campus').innerHTML = [['', 'Both campuses'], ['Kondhwa', 'Kondhwa'], ['Bibwewadi', 'Bibwewadi']].map(([v, t]) => `<button class="chip ${S.campus === v ? 'on' : ''}" data-campus="${v}">${t}</button>`).join('');
   $('#groups').innerHTML = Object.keys(G).map(g => `<button class="chip ${S.group === g ? 'on' : ''}" data-group="${g}">${G[g]} ${g}</button>`).join('');
-  const list = ML.filter(c => (S.group === 'All' || c.group === S.group) && (!S.campus || !c.db || !c.db.campus || c.db.campus === 'Both' || c.db.campus === S.campus) && (c.name + ' ' + c.label + ' ' + c.tag).toLowerCase().includes(q));
+  const list = ML.filter(c => (S.group === 'All' || (S.group === 'Saved' ? isFav(c) : c.group === S.group)) && (!S.campus || !c.db || !c.db.campus || c.db.campus === 'Both' || c.db.campus === S.campus) && (c.name + ' ' + c.label + ' ' + c.tag).toLowerCase().includes(q));
   const U = up().filter(s => M[s.club_id]);
+  $('#count').innerHTML = `<span class="pill big">🎯 ${ML.length} clubs</span><span class="pill big">📅 ${U.length} coming up</span><span class="pill big">🏫 2 campuses</span>`;
   $('#clubs').innerHTML = list.map((c, i) => { const n = c.db ? U.filter(s => s.club_id === c.db.id).length : 0;
-    return `<button class="club" data-club="${ML.indexOf(c)}" style="--a:${c.a};--b:${c.b};animation-delay:${Math.min(i, 14) * 30}ms">${c.db && c.db.photo ? `<img class="cov" src="${c.db.photo}" alt="">` : `<span class="em">${c.emoji}</span>`}<span class="shade"></span>${n ? `<span class="badge">${n} upcoming</span>` : ''}<h3>${esc(c.name)}</h3><small>${esc(c.label)}</small></button>`; }).join('') || '<p class="mut">No clubs match your search.</p>';
+    return `<button class="club" data-club="${ML.indexOf(c)}" style="--a:${c.a};--b:${c.b};animation-delay:${Math.min(i, 14) * 30}ms">${c.db && c.db.photo ? `<img class="cov" src="${c.db.photo}" alt="">` : `<span class="em">${c.emoji}</span>`}<span class="shade"></span><span class="heart" data-fav="${ML.indexOf(c)}" role="button" aria-label="Save club">${isFav(c) ? '♥' : '♡'}</span>${n ? `<span class="badge">${n} upcoming</span>` : ''}<h3>${esc(c.name)}</h3><small>${esc(c.label)}</small></button>`; }).join('') || `<p class="mut">${ML.length ? (S.group === 'Saved' ? 'Tap the heart on a club to save it here.' : 'No clubs match your search.') : 'No clubs yet. Check back soon.'}</p>`;
   $('#next').innerHTML = U.length ? `<h2 class="h">Coming up</h2><div class="chips strip">${U.slice(0, 10).map(s => { const c = M[s.club_id], d = dt(s.starts);
-    return `<button class="nx" data-club="${ML.indexOf(c)}" style="--a:${c.a};--b:${c.b}"><span>${c.emoji}</span><b>${esc(s.title)}</b><small>${esc(c.name)}</small><small>${d.mon} ${d.day}, ${d.full}</small></button>`; }).join('')}</div>` : '';
+    return `<button class="nx" data-club="${ML.indexOf(c)}" style="--a:${c.a};--b:${c.b}"><span>${c.emoji}</span><b>${esc(s.title)}</b><small>${esc(c.name)}</small><small>${d.mon} ${d.day}, ${d.full}</small><small class="rel">${rel(s.starts)}</small></button>`; }).join('')}</div>` : '';
   $('#events').innerHTML = U.map(s => ses(s, M[s.club_id])).join('') || '<p class="mut">No events yet. Check back soon.</p>';
   $('#promos').innerHTML = D.promos.map(p => `<div class="card" style="display:block"><img src="${p.photo}" alt="${esc(p.caption)}"><div style="padding-top:8px">${esc(p.caption)} <span class="pill">${p.campus}</span></div></div>`).join('') || '<p class="mut">No promos yet. Be the first to post one.</p>';
 }
 function openClub(c) {
   const ss = c.db ? up().filter(s => s.club_id === c.db.id) : [];
-  $('#sheet').innerHTML = `<button class="x" data-close aria-label="Close">✕</button><div class="sh" style="--a:${c.a};--b:${c.b}">${c.db && c.db.photo ? `<img class="cov" src="${c.db.photo}" alt=""><span class="shade"></span>` : `<div class="big">${c.emoji}</div>`}<span class="pill">${esc(c.label)}</span>${c.db && c.db.campus ? ` <span class="pill">${esc(c.db.campus)}</span>` : ''}<h2>${esc(c.name)}</h2><p>${esc(c.tag)}</p></div>
+  $('#sheet').innerHTML = `<button class="x" data-close aria-label="Close">✕</button><button class="x l" data-fav="${ML.indexOf(c)}" aria-label="Save club">${isFav(c) ? '♥' : '♡'}</button><button class="x l2" data-share aria-label="Share">↗</button><div class="sh" style="--a:${c.a};--b:${c.b}">${c.db && c.db.photo ? `<img class="cov" src="${c.db.photo}" alt=""><span class="shade"></span>` : `<div class="big">${c.emoji}</div>`}<span class="pill">${esc(c.label)}</span>${c.db && c.db.campus ? ` <span class="pill">${esc(c.db.campus)}</span>` : ''}<h2>${esc(c.name)}</h2><p>${esc(c.tag)}</p></div>
   <div class="sb"><h3>About</h3><p>${esc(c.db && c.db.descr || 'More details coming soon. Check the sessions below.')}</p>${c.db ? vid(c.db.video) : ''}
   <h3>Upcoming sessions</h3>${ss.map(s => ses(s, c)).join('') || '<p class="mut">No sessions announced yet. Check back soon.</p>'}</div>`;
-  $('#sheet').hidden = false; $('#sheet').scrollTop = 0; document.body.style.overflow = 'hidden';
+  CUR = c; $('#sheet').hidden = false; $('#sheet').scrollTop = 0; document.body.style.overflow = 'hidden';
 }
 const closeSheet = () => { $('#sheet').hidden = true; document.body.style.overflow = ''; };
 const tab = v => { ['clubs', 'events', 'feed', 'my'].forEach(t => $('#v-' + t).hidden = t !== v); document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === v)); scrollTo(0, 0); };
@@ -85,7 +93,10 @@ async function showMy(email) {
 }
 document.addEventListener('click', e => {
   const t = e.target; let b;
-  if (b = t.closest('[data-tab]')) { closeSheet(); tab(b.dataset.tab); }
+  if (b = t.closest('[data-fav]')) toggleFav(ML[+b.dataset.fav]);
+  else if (t.closest('[data-surprise]')) { if (ML.length) openClub(ML[Math.floor(Math.random() * ML.length)]); }
+  else if (t.closest('[data-share]')) share();
+  else if (b = t.closest('[data-tab]')) { closeSheet(); tab(b.dataset.tab); }
   else if (b = t.closest('[data-club]')) openClub(ML[+b.dataset.club]);
   else if (t.closest('[data-close]')) closeSheet();
   else if (b = t.closest('[data-group]')) { S.group = b.dataset.group; draw(); }
@@ -98,7 +109,7 @@ document.addEventListener('submit', async e => {
   const v = Object.fromEntries(new FormData(f));
   if (a === 'join') {
     const email = v.email.trim().toLowerCase(), name = v.name.trim(); localStorage.cs_name = name; localStorage.cs_email = email;
-    try { await post('regs', {session_id: f.dataset.sid, name, email}); msg('You are in! Track your status here.'); }
+    try { await post('regs', {session_id: f.dataset.sid, name, email}); msg('You are in! Track your status here.'); burst(); }
     catch (x) { msg(x.status === 409 ? 'You already joined this session.' : 'Could not join. Try again.'); }
     closeSheet(); tab('my'); showMy(email);
   }
@@ -109,4 +120,5 @@ document.addEventListener('submit', async e => {
     catch (x) { msg('Could not post. Try a smaller image.'); }
   }
 });
-load().then(() => { draw(); showMy(localStorage.cs_email); });
+$('#clubs').innerHTML = '<div class="club sk"></div>'.repeat(8);
+load().then(() => { draw(); document.body.classList.add('ready'); showMy(localStorage.cs_email); });
