@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CampusSync</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><b>CampusSync</b><a href="#clubs-h">Clubs</a><a href="#sessions-h">Sessions</a><a href="#promos-h">Promo feed</a><a href="#my-h">My events</a></header>
+<main>
+<div id="setup" class="flash" hidden>Not connected yet. Paste your Supabase URL and key into config.js (see README.txt).</div>
+<div class="bar"><select id="campus" aria-label="Campus"><option value="">Both campuses</option><option>Kondhwa</option><option>Bibwewadi</option></select><input id="q" placeholder="Search clubs"></div>
+<h2 id="clubs-h">Clubs</h2><div id="clubs" class="grid"></div>
+<h2 id="sessions-h">Sessions</h2><div id="sessions"></div>
+<h2 id="promos-h">Promo feed</h2>
+<p>Saw a poster on campus? Upload it so others can find the event.</p>
+<form class="row card pad" data-act="promo"><input type="file" name="photo" accept="image/*" required><input name="caption" placeholder="Event name or note"><select name="campus"><option>Both</option><option>Kondhwa</option><option>Bibwewadi</option></select><button>Post promo</button></form>
+<div id="promos" class="grid"></div>
+<h2 id="my-h">My events</h2>
+<form class="row" data-act="my"><input type="email" name="email" id="myemail" placeholder="Your email" required><button>Show my events</button></form>
+<div id="my" class="wrap" style="margin-top:12px"></div>
+</main><div id="toast" class="flash" hidden></div><script src="config.js"></script><script src="app.js"></script></body></html>
