@@ -1,16 +1,24 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CampusSync</title><link rel="stylesheet" href="style.css"></head>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a0e1f"><title>CampusSync</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"></head>
 <body>
-<header><b>CampusSync</b><a href="#clubs-h">Clubs</a><a href="#sessions-h">Sessions</a><a href="#promos-h">Promo feed</a><a href="#my-h">My events</a></header>
+<header class="top">Campus<b>Sync</b></header>
 <main>
-<div id="setup" class="flash" hidden>Not connected yet. Paste your Supabase URL and key into config.js (see README.txt).</div>
-<div class="bar"><select id="campus" aria-label="Campus"><option value="">Both campuses</option><option>Kondhwa</option><option>Bibwewadi</option></select><input id="q" placeholder="Search clubs"></div>
-<h2 id="clubs-h">Clubs</h2><div id="clubs" class="grid"></div>
-<h2 id="sessions-h">Sessions</h2><div id="sessions"></div>
-<h2 id="promos-h">Promo feed</h2>
-<p>Saw a poster on campus? Upload it so others can find the event.</p>
-<form class="row card pad" data-act="promo"><input type="file" name="photo" accept="image/*" required><input name="caption" placeholder="Event name or note"><select name="campus"><option>Both</option><option>Kondhwa</option><option>Bibwewadi</option></select><button>Post promo</button></form>
-<div id="promos" class="grid"></div>
-<h2 id="my-h">My events</h2>
-<form class="row" data-act="my"><input type="email" name="email" id="myemail" placeholder="Your email" required><button>Show my events</button></form>
-<div id="my" class="wrap" style="margin-top:12px"></div>
-</main><div id="toast" class="flash" hidden></div><script src="config.js"></script><script src="app.js"></script></body></html>
+<div id="setup" class="note" hidden>Not connected yet. Check config.js.</div>
+<section id="v-clubs" class="view">
+  <div class="hero"><h1>Find your <span>club</span>.</h1><p id="count"></p></div>
+  <div class="chips" id="campus"></div>
+  <input id="q" type="search" placeholder="Search clubs, skills, interests" aria-label="Search clubs">
+  <div class="chips" id="groups" style="margin-top:10px"></div>
+  <div id="next"></div>
+  <h2 class="h">All clubs</h2><div id="clubs" class="grid"></div>
+</section>
+<section id="v-events" class="view" hidden><h1 class="s">Events</h1><div id="events"></div></section>
+<section id="v-feed" class="view" hidden><h1 class="s">Promo feed</h1><p class="mut">Saw a poster on campus? Share it here.</p>
+  <form class="card" data-act="promo"><input type="file" name="photo" accept="image/*" required><input name="caption" placeholder="Event name or note"><select name="campus"><option>Both</option><option>Kondhwa</option><option>Bibwewadi</option></select><button class="btn">Post promo</button></form>
+  <div id="promos" class="grid p"></div></section>
+<section id="v-my" class="view" hidden><h1 class="s">My events</h1>
+  <form class="card" data-act="my"><input type="email" name="email" id="myemail" placeholder="Your email" required><button class="btn">Show my events</button></form><div id="my"></div></section>
+</main>
+<nav class="tabs"><button data-tab="clubs" class="on"><span>🏠</span>Clubs</button><button data-tab="events"><span>📅</span>Events</button><button data-tab="feed"><span>📣</span>Feed</button><button data-tab="my"><span>🎟️</span>Mine</button></nav>
+<div id="sheet" class="sheet" hidden></div><div id="toast" hidden></div>
+<script src="config.js"></script><script src="app.js"></script></body></html>
