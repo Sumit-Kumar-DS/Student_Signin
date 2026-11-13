@@ -28,7 +28,7 @@ async function rest(p, o = {}) {
   const t = await r.text(); return t ? JSON.parse(t) : null;
 }
 const post = (t, row) => rest(t, {method: 'POST', body: JSON.stringify(row), headers: {Prefer: 'return=minimal'}});
-let D = {clubs: [], sessions: [], promos: []}, ML = [], M = {}, S = {campus: '', group: 'All', q: ''};
+let D = {clubs: [], sessions: [], promos: []}, ML = [], M = {}, S = {campus: '', group: 'All', q: '', day: ''};
 async function load() {
   if (!C.url || !C.key) { $('#setup').hidden = false; return; }
   try { [D.clubs, D.sessions, D.promos] = await Promise.all([rest('clubs?select=*&order=name'), rest('sessions?select=*&order=starts'), rest('promos?select=*&order=created_at.desc')]); }
@@ -73,7 +73,10 @@ function draw() {
     return `<button class="club" data-club="${ML.indexOf(c)}" style="--a:${c.a};--b:${c.b};animation-delay:${Math.min(i, 14) * 30}ms">${c.db && c.db.photo ? `<img class="cov" src="${c.db.photo}" alt="">` : `<span class="em">${c.emoji}</span>`}<span class="shade"></span><span class="heart" data-fav="${ML.indexOf(c)}" role="button" aria-label="Save club">${isFav(c) ? '♥' : '♡'}</span>${n ? `<span class="badge">${n} upcoming</span>` : ''}<h3>${esc(c.name)}</h3><small>${esc(c.label)}</small></button>`; }).join('') || `<p class="mut">${ML.length ? (S.group === 'Saved' ? 'Tap the heart on a club to save it here.' : 'No clubs match your search.') : 'No clubs yet. Check back soon.'}</p>`;
   $('#next').innerHTML = U.length ? `<h2 class="h">Coming up</h2><div class="chips strip">${U.slice(0, 10).map(s => { const c = M[s.club_id], d = dt(s.starts);
     return `<button class="nx" data-club="${ML.indexOf(c)}" style="--a:${c.a};--b:${c.b}"><span>${c.emoji}</span><b>${esc(s.title)}</b><small>${esc(c.name)}</small><small>${d.mon} ${d.day}, ${d.full}</small><small class="rel">${rel(s.starts)}</small></button>`; }).join('')}</div>` : '';
-  $('#events').innerHTML = U.map(s => ses(s, M[s.club_id])).join('') || '<p class="mut">No events yet. Check back soon.</p>';
+  const key = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  $('#days').innerHTML = `<button class="day ${S.day ? '' : 'on'}" data-day=""><b>All</b><small>${U.length} events</small></button>` + Array.from({length: 7}, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i); const k = key(d), n = U.filter(s => s.starts.startsWith(k)).length;
+    return `<button class="day ${S.day === k ? 'on' : ''}" data-day="${k}"><b>${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.toLocaleString([], {weekday: 'short'})}</b><small>${d.getDate()} ${d.toLocaleString([], {month: 'short'})}</small><small>${n ? n + (n > 1 ? ' events' : ' event') : 'No events'}</small></button>`; }).join('');
+  $('#events').innerHTML = (S.day ? U.filter(s => s.starts.startsWith(S.day)) : U).map(s => ses(s, M[s.club_id])).join('') || `<p class="mut">${S.day ? 'Nothing scheduled that day.' : 'No events yet. Check back soon.'}</p>`;
   $('#promos').innerHTML = D.promos.map(p => `<div class="card" style="display:block"><img src="${p.photo}" alt="${esc(p.caption)}"><div style="padding-top:8px">${esc(p.caption)} <span class="pill">${p.campus}</span></div></div>`).join('') || '<p class="mut">No promos yet. Be the first to post one.</p>';
 }
 function openClub(c) {
@@ -84,7 +87,7 @@ function openClub(c) {
   CUR = c; $('#sheet').hidden = false; $('#sheet').scrollTop = 0; document.body.style.overflow = 'hidden';
 }
 const closeSheet = () => { $('#sheet').hidden = true; document.body.style.overflow = ''; };
-const tab = v => { ['clubs', 'events', 'feed', 'my'].forEach(t => $('#v-' + t).hidden = t !== v); document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === v)); scrollTo(0, 0); };
+const tab = v => { ['clubs', 'events', 'feed', 'my', 'more'].forEach(t => $('#v-' + t).hidden = t !== v); document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === v)); scrollTo(0, 0); };
 async function showMy(email) {
   email = (email || '').trim().toLowerCase(); $('#myemail').value = email;
   if (!email || !C.url) { $('#my').innerHTML = '<p class="mut">Enter your email to see your events.</p>'; return; }
@@ -96,6 +99,9 @@ document.addEventListener('click', e => {
   if (b = t.closest('[data-fav]')) toggleFav(ML[+b.dataset.fav]);
   else if (t.closest('[data-surprise]')) { if (ML.length) openClub(ML[Math.floor(Math.random() * ML.length)]); }
   else if (t.closest('[data-share]')) share();
+  else if (t.closest('[data-sug]')) $('#sug-h').scrollIntoView({behavior: 'smooth'});
+  else if (t.closest('[data-install]')) msg('Tap the ⋮ menu in your browser, then Add to Home screen.');
+  else if (b = t.closest('[data-day]')) { S.day = b.dataset.day; draw(); }
   else if (b = t.closest('[data-tab]')) { closeSheet(); tab(b.dataset.tab); }
   else if (b = t.closest('[data-club]')) openClub(ML[+b.dataset.club]);
   else if (t.closest('[data-close]')) closeSheet();
@@ -113,6 +119,7 @@ document.addEventListener('submit', async e => {
     catch (x) { msg(x.status === 409 ? 'You already joined this session.' : 'Could not join. Try again.'); }
     closeSheet(); tab('my'); showMy(email);
   }
+  if (a === 'sug') { try { await post('suggestions', {category: v.category, message: v.message.trim(), name: (v.name || '').trim() || null}); f.reset(); msg('Thanks! Your suggestion was sent to the admins.'); burst(); } catch (x) { msg('Could not send. Try again in a moment.'); } }
   if (a === 'my') showMy(v.email);
   if (a === 'promo') {
     const p = await photo(f.elements.photo.files[0]); if (!p) return msg('Choose a PNG, JPG, WEBP or GIF image.');

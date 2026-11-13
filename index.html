@@ -12,13 +12,22 @@
   <div id="next"></div>
   <h2 class="h">All clubs</h2><div id="clubs" class="grid"></div>
 </section>
-<section id="v-events" class="view" hidden><h1 class="s">Events</h1><div id="events"></div></section>
+<section id="v-events" class="view" hidden><h1 class="s">Events</h1><div id="days" class="days"></div><div id="events"></div></section>
 <section id="v-feed" class="view" hidden><h1 class="s">Promo feed</h1><p class="mut">Saw a poster on campus? Share it here.</p>
   <form class="card" data-act="promo"><input type="file" name="photo" accept="image/*" required><input name="caption" placeholder="Event name or note"><select name="campus"><option>Both</option><option>Kondhwa</option><option>Bibwewadi</option></select><button class="btn">Post promo</button></form>
   <div id="promos" class="grid p"></div></section>
 <section id="v-my" class="view" hidden><h1 class="s">My events</h1>
   <form class="card" data-act="my"><input type="email" name="email" id="myemail" placeholder="Your email" required><button class="btn">Show my events</button></form><div id="my"></div></section>
+<section id="v-more" class="view" hidden><h1 class="s">More <span class="bdg beta">Beta</span></h1><p class="mut">Handy tools for campus life.</p>
+  <div class="fgrid">
+    <div class="fcard"><h3>Timetable <span class="bdg ext">Student-made</span></h3><p>See your class timetable, find empty rooms and teachers. Made by another VIT Pune student, not part of CampusSync.</p><a class="btn" href="https://vit-tt.pages.dev/" target="_blank" rel="noopener">Open Timetable ↗</a></div>
+    <div class="fcard"><h3>Suggest something <span class="bdg new">New</span></h3><p>Want a new club, event or feature? Tell the admins.</p><button class="btn" data-sug>Write a suggestion</button></div>
+    <div class="fcard"><h3>Add to home screen</h3><p>Open CampusSync like a real app, full screen.</p><button class="btn" data-install>Show me how</button></div>
+  </div>
+  <h2 class="h" id="sug-h">Suggestions</h2>
+  <form class="card" data-act="sug"><select name="category"><option>Club idea</option><option>Event idea</option><option>Website feedback</option><option>Other</option></select><textarea name="message" rows="4" maxlength="1000" minlength="3" placeholder="What would make campus life better?" required></textarea><input name="name" placeholder="Your name (optional)" maxlength="60"><button class="btn">Send suggestion</button></form>
+</section>
 </main>
-<nav class="tabs"><button data-tab="clubs" class="on"><span>🏠</span>Clubs</button><button data-tab="events"><span>📅</span>Events</button><button data-tab="feed"><span>📣</span>Feed</button><button data-tab="my"><span>🎟️</span>Mine</button></nav>
+<nav class="tabs"><button data-tab="clubs" class="on"><span>🏠</span>Clubs</button><button data-tab="events"><span>📅</span>Events</button><button data-tab="feed"><span>📣</span>Feed</button><button data-tab="my"><span>🎟️</span>Mine</button><button data-tab="more"><span>✨</span>More</button></nav>
 <div id="sheet" class="sheet" hidden></div><div id="toast" hidden></div>
 <script src="config.js"></script><script src="app.js"></script></body></html>
