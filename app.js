@@ -79,10 +79,13 @@ function draw() {
   $('#events').innerHTML = (S.day ? U.filter(s => s.starts.startsWith(S.day)) : U).map(s => ses(s, M[s.club_id])).join('') || `<p class="mut">${S.day ? 'Nothing scheduled that day.' : 'No events yet. Check back soon.'}</p>`;
   $('#promos').innerHTML = D.promos.map(p => `<div class="card" style="display:block"><img src="${p.photo}" alt="${esc(p.caption)}"><div style="padding-top:8px">${esc(p.caption)} <span class="pill">${p.campus}</span></div></div>`).join('') || '<p class="mut">No promos yet. Be the first to post one.</p>';
 }
+const appliedIds = () => { try { return JSON.parse(localStorage.cs_applied || '[]'); } catch (e) { return []; } };
+const applyBox = c => !c.db ? '' : appliedIds().includes(c.db.id) ? '<p><span class="pill big">✓ Application sent. Track it under Mine.</span></p>' :
+  `<details class="apply"><summary class="btn" style="display:block;text-align:center;padding:14px;font-size:17px">Join this club</summary><form data-act="apply" data-cid="${c.db.id}" style="display:flex;flex-direction:column;gap:8px;margin-top:10px"><input name="name" placeholder="Your name" value="${esc(localStorage.cs_name || '')}" required maxlength="80"><input name="email" type="email" placeholder="Email" value="${esc(localStorage.cs_email || '')}" required><input name="branch" placeholder="Branch and year (optional), e.g. CSE DS, FY" maxlength="60"><textarea name="message" rows="3" maxlength="500" placeholder="Why do you want to join? (optional)"></textarea><button class="btn">Send application</button></form></details>`;
 function openClub(c) {
   const ss = c.db ? up().filter(s => s.club_id === c.db.id) : [];
   $('#sheet').innerHTML = `<button class="x" data-close aria-label="Close">✕</button><button class="x l" data-fav="${ML.indexOf(c)}" aria-label="Save club">${isFav(c) ? '♥' : '♡'}</button><button class="x l2" data-share aria-label="Share">↗</button><div class="sh" style="--a:${c.a};--b:${c.b}">${c.db && c.db.photo ? `<img class="cov" src="${c.db.photo}" alt=""><span class="shade"></span>` : `<div class="big">${c.emoji}</div>`}<span class="pill">${esc(c.label)}</span>${c.db && c.db.campus ? ` <span class="pill">${esc(c.db.campus)}</span>` : ''}<h2>${esc(c.name)}</h2><p>${esc(c.tag)}</p></div>
-  <div class="sb"><h3>About</h3><p>${esc(c.db && c.db.descr || 'More details coming soon. Check the sessions below.')}</p>${c.db ? vid(c.db.video) : ''}
+  <div class="sb">${applyBox(c)}<h3>About</h3><p>${esc(c.db && c.db.descr || 'More details coming soon. Check the sessions below.')}</p>${c.db ? vid(c.db.video) : ''}
   <h3>Upcoming sessions</h3>${ss.map(s => ses(s, c)).join('') || '<p class="mut">No sessions announced yet. Check back soon.</p>'}</div>`;
   CUR = c; $('#sheet').hidden = false; $('#sheet').scrollTop = 0; document.body.style.overflow = 'hidden';
 }
@@ -91,8 +94,11 @@ const tab = v => { ['clubs', 'events', 'feed', 'my', 'more'].forEach(t => $('#v-
 async function showMy(email) {
   email = (email || '').trim().toLowerCase(); $('#myemail').value = email;
   if (!email || !C.url) { $('#my').innerHTML = '<p class="mut">Enter your email to see your events.</p>'; return; }
-  let rows = []; try { rows = await rest('rpc/my_regs', {method: 'POST', body: JSON.stringify({p_email: email})}); } catch (e) { msg('Could not load your events.'); }
-  $('#my').innerHTML = rows.map(r => `<div class="ses"><div class="si"><b>${esc(r.club)}: ${esc(r.title)}</b><div class="mut">${dt(r.starts).mon} ${dt(r.starts).day}, ${dt(r.starts).full}</div><span class="pill">${pay(r)}</span> <span class="st ${r.status}">${r.status}</span>${r.note ? `<div>${esc(r.note)}</div>` : ''}</div></div>`).join('') || '<p class="mut">No events yet. Join a session from a club page.</p>';
+  let rows = [], apps = []; const body = JSON.stringify({p_email: email});
+  try { rows = await rest('rpc/my_regs', {method: 'POST', body}); } catch (e) { msg('Could not load your events.'); }
+  try { apps = await rest('rpc/my_applications', {method: 'POST', body}); } catch (e) {}
+  $('#my').innerHTML = rows.map(r => `<div class="ses"><div class="si"><b>${esc(r.club)}: ${esc(r.title)}</b><div class="mut">${dt(r.starts).mon} ${dt(r.starts).day}, ${dt(r.starts).full}</div><span class="pill">${pay(r)}</span> <span class="st ${r.status}">${r.status}</span>${r.note ? `<div>${esc(r.note)}</div>` : ''}</div></div>`).join('') || '<p class="mut">Nothing yet. Join a club or a session from a club page.</p>';
+  if (apps.length) $('#my').innerHTML = '<h2 class="h">Club applications</h2>' + apps.map(r => `<div class="ses"><div class="si"><b>${esc(r.club)}</b><div class="mut">Applied ${dt(r.created_at).mon} ${dt(r.created_at).day}</div><span class="st ${r.status}">${r.status}</span>${r.note ? `<div>${esc(r.note)}</div>` : ''}</div></div>`).join('') + (rows.length ? '<h2 class="h">Session registrations</h2>' + $('#my').innerHTML : '');
 }
 document.addEventListener('click', e => {
   const t = e.target; let b;
@@ -120,6 +126,13 @@ document.addEventListener('submit', async e => {
     closeSheet(); tab('my'); showMy(email);
   }
   if (a === 'sug') { try { await post('suggestions', {category: v.category, message: v.message.trim(), name: (v.name || '').trim() || null}); f.reset(); msg('Thanks! Your suggestion was sent to the admins.'); burst(); } catch (x) { msg('Could not send. Try again in a moment.'); } }
+  if (a === 'apply') {
+    const email = v.email.trim().toLowerCase(), name = v.name.trim(); localStorage.cs_name = name; localStorage.cs_email = email;
+    const done = () => { const ap = appliedIds(); ap.push(f.dataset.cid); localStorage.cs_applied = JSON.stringify(ap); };
+    try { await post('club_applications', {club_id: f.dataset.cid, name, email, branch: (v.branch || '').trim() || null, message: (v.message || '').trim() || null}); done(); msg('Application sent! Track it under Mine.'); burst(); }
+    catch (x) { if (x.status === 409) { done(); msg('You already applied to this club.'); } else { msg('Could not send. Try again.'); return; } }
+    closeSheet(); tab('my'); showMy(email);
+  }
   if (a === 'my') showMy(v.email);
   if (a === 'promo') {
     const p = await photo(f.elements.photo.files[0]); if (!p) return msg('Choose a PNG, JPG, WEBP or GIF image.');
